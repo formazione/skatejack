@@ -4,31 +4,6 @@ from pygame.locals import *
 # are created by this program with 's'
 from levels2b import *
 
-
-# remove all eventually crystals
-for rnum, room in enumerate(layout[1:-1]):
-    for row, line in enumerate(room):
-        for col, item in enumerate(line):
-            if item == "100":
-                layout[rnum][row][col] = " "
-
-
-possible_place = []
-for rnum, room in enumerate(layout[1:-1]):
-    for row, line in enumerate(room):
-        for col, item in enumerate(line):
-            # print(item)
-            if item == " ":
-                possible_place.append([row, col])
-    # print(possible_place)
-    x = random.choice(possible_place) # IndexError: list index out of range  
-    # print(x)    
-    layout[rnum][x[0]][x[1]] = "100" # TypeError: list indices must be integers or slices, not list
-    # print(room)
-    possible_place = []
-
-
-
 COUNTDOWN_LIMIT = 2000
 
 def init():
@@ -36,6 +11,15 @@ def init():
     pygame.display.init()
     pygame.mixer.init()
 
+'''
+G:\timecrystals\GAME5b_passthrough4.py
+
+- ISOLATED CODE FOR JUMPING TO PUT THAT TILE AS PASSABLE THROUGH
+- ADDED ANIMATION WHILE JUMPING
+
+
+
+'''
 
 
 init()
@@ -45,20 +29,6 @@ init()
 # SCREEN IS THE SURFACE TO BLIT ON DISPLAY SCALED
 
 # DISPLAY IS 2x SCREEN
-
-# 24.7.2021 - game5c.py - random crystals in every room
-'''
-when load the level:
-for every -1, put the coords into a list, then
-choose one element of the list and put the crystal
-to those coords
-
-'''
-# next: closed rooms that opens only after getting the crystal
-# change crystal to... something referring to skateboard
-# better animation for double jumping
-# converting collision with daflyffy method or my method (just around the player)
-
 screen_ratio = 3
 display = pygame.display.set_mode((480*screen_ratio + 64, 288*screen_ratio))
 screen = pygame.Surface((480, 288))
@@ -195,7 +165,7 @@ class Terrain():
                     player.bottomCollision = True # Collition with the bottom, the player is on the terrain
                     self.col = True #Vuol dire che il tile è in contatto con il player
                     player.jump_once = 0
-                    
+                    remove.append(self)
         
         else:
             if player.x + 16 > self.x and player.x < self.x + 32 and not self.col: # collition with self?
@@ -267,7 +237,7 @@ class Crystal():
         global countdown
         if ((player.x - self.x)**2 + (player.y - self.y)**2)**0.5 < 32 and countdown > 0:
             collected.append((self.x, self.y, room_num))
-            print(f"Collezionate: {len(collected)} gemme")
+            
             # DO not want the player to stop when collects a crystal (it is annoying)
             player.timer = 15
             # but I do want countdown to go back

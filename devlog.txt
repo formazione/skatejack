@@ -1,0 +1,31 @@
+game5c.py
+- random crystals
+
+
+
+
+---- checklist ---
+- new character
+- enemies
+	rocks
+	space dishes
+	crystals moves and fires
+- new collision system
+- sound when runs
+- a way to run faster or slower
+- new animation on double jump
+- game engine new from scratch with tutorial / book
+- possible spot defined for the crystals instead of totally random
+	add all possible crystals in editor and then in the game
+	choose just one of this randomly getting a list of all "100"
+	and then choosing one and erasing all the others
+- avoid too many jump sound
+- check why score disappeares
+- put a story that you got to save a girl
+- make you go also without skate more slowly
+- die when fall down
+- put a goal to the map
+- roll the player when double jump
+- use the down key to slow the skate
+- make the velocity indipendent from the frame rate
+- make the stuff around the crystal rotate
