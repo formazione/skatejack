@@ -1,0 +1,7 @@
+randomize_crystals --- in locals, imported in GAMEe4.py the first time
+
+	return a randomized disposition of the crystals in every room.
+	It deletes all crystals if present.
+	It adds one crystal in a random position.
+
+
