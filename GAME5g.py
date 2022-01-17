@@ -2,43 +2,138 @@ import pygame, time, random, math
 from pygame.locals import *
 # THE LEVELS ARE HERE, they
 # are created by this program with 's'
-from levels2b import *
+
+from locals.randomize_crystals import *
+
+group = []
+class Particles(pygame.sprite.Sprite):
+    "Creates particles starting from pos with a color"
+ 
+    def __init__(self, pos, y_dir, color, sparse=0, turn="off"):
+        super(Particles, self).__init__()
+        self.particles_list = []
+        self.pos = pos
+        self.color = color
+        self.y_dir = y_dir
+        self.sparse = sparse # generate particles not from the same starting point
+        # self.generate_particles()
+        group.append(self)
+        self.turn = turn # this makes the effect visible
+ 
+    def choose_y_dir(self):
+        "Makes particles go in every direction you want"
+ 
+        # Make the flow go down
+        if self.y_dir == "down":
+            y_dir = 2
+ 
+        elif self.y_dir == "up":
+            y_dir = -2
+ 
+        # Make the particles spread all y_dirs
+        elif self.y_dir == "all":
+            y_dir = random.randrange(-2, 2, 1)
+ 
+        return y_dir
+ 
+    def generate_particles(self):
+        "List with position etc of particles"
+ 
+        if self.sparse == 1:
+            self.pos[0] = random.randint(0, 600)
+ 
+        # setting the data for each particles
+        origin = [self.pos[0], self.pos[1]] # Starting here each particles
+        y_dir = self.choose_y_dir()
+        x_dir = random.randint(0, 20) / 10 - 1
+        dirs = [x_dir, y_dir] # movement
+        radius = random.randint(4,6) # radius
+        # Appending data to the list
+        self.particles_list.append([origin, dirs, radius])
+        self.generate_movements()
+ 
+    def generate_movements(self):
+        
+        # Moving the coordinates and size of self.particles_list
+        for particle in self.particles_list[:]:
+            particle[0][0] += particle[1][0] # x pos += x_dir
+            particle[0][1] += particle[1][1] # y pos += y_dir
+            particle[2] -= 0.05 # how fast circles shrinks
+            particle[1][1] += 0.01 # circles speed
+            # if particle[2] &lt;= 0:
+            if particle[2] >= 0:
+                self.particles_list.remove(particle)
+            # do not call draw from here: it slows down the frame rate
+            # self.draw()
+    
+    def draw(self):
+        "Draws particles based on data in the self.particles_list"
+        if self.turn == "on":
+            for particle in self.particles_list:
+                 pygame.draw.circle(
+                    display, (self.color),
+                (round(particle[0][0]), round(particle[0][1])),
+                 round(particle[2]))
+# Some random colors
+RED = (255, 0, 0) 
+GREEN = (0, 255, 0)
+YELLOW = (255, 255, 0)
+CYAN = (0, 255, 255)
+BLUE = (0, 0, 255)
+WHITE = (255, 255, 255)
+# Creating the list with particles ready to be drawn
+
+particles3 = []
+def fire(crd1, crd2, number=5, color=1):
+    ''' a certain number of particles '''
+    # mx, my = pygame.mouse.get_pos()
 
 
-# remove all eventually crystals
-for rnum, room in enumerate(layout[1:-1]):
-    for row, line in enumerate(room):
-        for col, item in enumerate(line):
-            if item == "100":
-                layout[rnum][row][col] = " "
+    for i in range(number):
+        particles3.append([[crd1, crd2], 
+            [random.randint(0, 42) / 6 - 3.5, random.randint(0, 42) / 6 - 3.5], 
+            random.randint(1, 4)])
+    # screen.fill((0,0,0))
+    for particle in particles3:
+        particle[0][0] += particle[1][0]
+        particle[0][1] += particle[1][1]
+        particle[2] -= .1
+        particle[1][1] += 0.15
+        c1 = random.randrange(200,255)
+        c2 = random.randrange(100,255)
+        c3 = random.randrange(100,255)
+        if color == 1:
+            color = (c1,c2,c3)
+        elif color == 2:
+            color = (c1,c2,0)
+        if particle[2] <= 0:
+            particles3.remove(particle)
+        pygame.draw.circle(screen, color, [int(particle[0][0]), int(particle[0][1])], int(particle[2]))
 
-
-possible_place = []
-for rnum, room in enumerate(layout[1:-1]):
-    for row, line in enumerate(room):
-        for col, item in enumerate(line):
-            # print(item)
-            if item == " ":
-                possible_place.append([row, col])
-    # print(possible_place)
-    x = random.choice(possible_place) # IndexError: list index out of range  
-    # print(x)    
-    layout[rnum][x[0]][x[1]] = "100" # TypeError: list indices must be integers or slices, not list
-    # print(room)
-    possible_place = []
-
-
-
-COUNTDOWN_LIMIT = 2000
 
 def init():
+
     pygame.init()
     pygame.display.init()
     pygame.mixer.init()
 
 
+gen_check = 1
+def generate():
+    "Start drawing all circles on the screen"
+    global gen_check
 
+    if gen_check:
+        print("Generate should work")
+        gen_check = 0
+    for par in group:
+        par.generate_particles()
+        par.draw()
+# this function randomize the crystals
+layout = randomize_crystals()
+COUNTDOWN_LIMIT = 2000
 init()
+particles = Particles([0, 0], y_dir="down", color=WHITE, sparse=1)
 
 # DISPLAY SURFACES
 # DISPLAY IS THE MAIN SURFACE
@@ -89,6 +184,7 @@ jump = pygame.mixer.Sound("assets/jump.mp3")
 # THE SPRITE FOR THE PLAYER
 class Player():
     def __init__(self, x, y):
+       
         # super(Player, self).__init__()
         self.x = x
         self.y = y
@@ -108,14 +204,15 @@ class Player():
         self.rightCollision = False
 
     def inertial_speed(self):
-        ''' this makes the player slide on the tiles depending on speed '''
-        if self.xSpeed > 0: # decelera quando cade su un tile andando verso destra
-            self.xSpeed -= 0.2 # [[[[[[[[ 0.3 valore originale ]]]]]]]]
-        elif self.xSpeed < 0: # se va verso sinistra decelera con un + perchè...
-            self.xSpeed += 0.2 # CAMBIO!!!! #######>>>> 0.3 valore originale
-        if abs(self.xSpeed) < 0.3: # quando la velocità è inferiore a 0.3 si ferma
+        if self.xSpeed > 0.3:
+            self.xSpeed -= 0.2
+        elif self.xSpeed < 0.3:
+            self.xSpeed += 0.2
+        else:
             self.xSpeed = 0
     def update(self):
+        global comic_time
+
         self.x += self.xSpeed
         self.y += self.ySpeed
         if self.ySpeed < 8:
@@ -123,19 +220,29 @@ class Player():
         if self.bottomCollision: # quando c'è un tile sotto non cade
             self.ySpeed = 0
             self.inertial_speed()
-        if keys[pygame.K_s] and (self.bottomCollision or self.rightCollision or self.leftCollision):# and not self.topCollision:
+
+        # JUMP
+        if keys[pygame.K_x] and (self.bottomCollision or self.rightCollision or self.leftCollision):# and not self.topCollision:
             if self.jump_once < 1:
         # if keys[pygame.K_UP] and self.bottomCollision:
-                self.ySpeed = -8
-                self.bottomCollision = 0
-                self.jump_once += .5
-            pygame.mixer.Sound.play(jump)
-        elif keys[pygame.K_a] and keys[pygame.K_RIGHT]:
+                if abs(self.xSpeed) > .5:
+                    self.ySpeed = -8
+                    self.bottomCollision = 0
+                    self.jump_once += .5
+                    pygame.mixer.Sound.play(jump)
+                    comic("Double jump")
+                else:
+                    comic("Speed")
+
+        
+        elif keys[pygame.K_z] and keys[pygame.K_RIGHT]:
             if self.xSpeed > 3:
                 self.xSpeed = 0
-        elif keys[pygame.K_a] and keys[pygame.K_LEFT]:
+            comic("Break")
+        elif keys[pygame.K_z] and keys[pygame.K_LEFT]:
             if self.xSpeed < -3:
                 self.xSpeed = 0
+            comic("Break")
              #############
         #    LEFT - RIGHT
              #############
@@ -181,16 +288,26 @@ class Terrain():
 
 
         if self.type == 4:
-            if player.x + 32 > self.x and player.x < self.x + 16:# and not self.col:
+            if player.x + 31 > self.x and player.x < self.x + 16:# and not self.col:
                 if player.y + 32 > self.y and player.y + 32 < self.y + 16:
                     player.ySpeed = -10
                     player.bottomCollision = False
                     pygame.mixer.Sound.play(jump)
                     remove.append(self)
 
+
+        if self.type == 5:
+            if player.x + 31 > self.x and player.x < self.x + 16:# and not self.col:
+                if player.y + 32 > self.y and player.y + 32 < self.y + 16:
+                    # player.ySpeed = +3
+                    player.bottomCollision = False
+                    pygame.mixer.Sound.play(sfx_collect)
+                    remove.append(self)
+
+
         # il terzo gruppo di tiles
         elif self.level == 64:
-            if player.x + 16 > self.x and player.x < self.x + 32 and not self.col: # collition with self?
+            if player.x + 16 > self.x and player.x < self.x + 31 and not self.col: # collition with self?
             # Se i piedi del player si trovano all'altezza del tile, cioè sopra...
                 if player.y + 32 > self.y and player.y + 32 < self.y + 16:
                     # il player viene piazzato esattamente sopra il tile
@@ -202,7 +319,7 @@ class Terrain():
                     
         
         else:
-            if player.x + 16 > self.x and player.x < self.x + 32 and not self.col: # collition with self?
+            if player.x + 16 > self.x and player.x < self.x + 31 and not self.col: # collition with self?
             # Se i piedi del player si trovano all'altezza del tile, cioè sopra...
                 if player.y + 32 > self.y and player.y + 32 < self.y + 16:
                     # il player viene piazzato esattamente sopra il tile
@@ -224,30 +341,31 @@ class Terrain():
                     
                     # DOWN
                     
-                    elif self.type == 5:
-                        player.y += 64
-                        pygame.mixer.Sound.play(sfx_crystal)
+                    # elif self.type == 5:
+                    #     player.y += 64
+                    #     pygame.mixer.Sound.play(sfx_crystal)
 
 
-                if player.x > self.x and player.x < self.x + 32:
-                    if player.y > self.y + 16 and player.y < self.y + 32:
-                        player.y = self.y + 32
+                if player.x > self.x and player.x < self.x + 31:
+                    if player.y > self.y + 16 and player.y < self.y + 31:
+                        player.y = self.y + 31
                         player.ySpeed = 0 # non salta più
                         player.topCollision = True # collide col tile verso l'alto
                         self.col = True # la collisione del player c'è
             
             # se i piedi sono sopra un tile e la testa è minore della base del tile e non c'è collisione
             # if player.y + 32 > self.y and player.y < self.y + 32 and not self.col:
-            if player.y + 32 > self.y and player.y < self.y + 32 and not self.col:
+            # if player.y + 31 > self.y and player.y < self.y + 31 and not self.col:
+            if player.y + 31 == self.y + 31 and not self.col:
 
-                if player.x + 32 > self.x and player.x + 32 < self.x + 16:
+                if player.x + 31 > self.x and player.x + 31 < self.x + 16:
                     player.x = self.x - 32
                     player.xSpeed = -0.4
                     player.rightCollision = True
                     self.col = True
                 # COLLITION LEFT
-                if player.x > self.x + 16 and player.x < self.x + 32:
-                    player.x = self.x + 32
+                if player.x > self.x + 16 and player.x < self.x + 31:
+                    player.x = self.x + 31
                     player.xSpeed = 0.4
                     player.leftCollision = True
                     self.col = True
@@ -262,16 +380,22 @@ class Terrain():
             else:
                 screen.blit(spr_tiles, (int(self.x), int(self.y)), (self.type * 32, 0 + self.level, 32, 32))
 
+def rnd():
+    return random.randrange(200,255), random.randrange(100,255), random.randrange(100,255)
+
 class Crystal():
     def __init__(self, x, y, num):
         self.x = x
         self.y = y
         self.num = num
+        self.particles3 = []
     def update(self):
         global countdown
         if ((player.x - self.x)**2 + (player.y - self.y)**2)**0.5 < 32 and countdown > 0:
             collected.append((self.x, self.y, room_num))
             print(f"Collezionate: {len(collected)} gemme")
+            comic_time = 100
+            comic(f"{len(collected)}")
             # DO not want the player to stop when collects a crystal (it is annoying)
             player.timer = 15
             # but I do want countdown to go back
@@ -285,45 +409,37 @@ class Crystal():
         if (self.x, self.y, self.num) in collected:
             remove.append(self)
 
+
+
+    def fire(self, crd1, crd2, number=5, color=1):
+        for i in range(number):
+            self.particles3.append([[crd1, crd2], 
+                [random.randint(0, 42) / 6 - 3.5, random.randint(0, 42) / 6 - 3.5], 
+                random.randint(1, 4)])
+        for particle in self.particles3:
+            particle[0][0] += particle[1][0]
+            particle[0][1] += particle[1][1]
+            particle[2] -= .1
+            particle[1][1] += 0.15
+            rndcolor = c1, c2, c3 = rnd()
+            rndcolor = (c1,c2,c3) if color == 1 else (c1, c2, 0)
+            if particle[2] <= 0:
+                self.particles3.remove(particle)
+            pygame.draw.circle(screen, rndcolor, [int(particle[0][0]), int(particle[0][1])], int(particle[2]))
+
             
     def draw(self):
         if not self in remove:
-            screen.blit(spr_crystal1,(int(self.x), int(self.y) + math.sin(timer*3 / 32) * 16), ((timer % 16 < 8) * 32, 0, 32, 32))
+            # fire(int(self.x)+15, int(self.y) + math.sin(timer*3 / 32) * 16 +15, number=5, color=2)
+            self.fire(int(self.x) + math.cos(timer / 32) * random.randrange(8, 16, 8) +5,
+             int(self.y) + math.sin(timer / 16) * 16 + 5,
+             number=5, color=2)
+            screen.blit(spr_crystal1,(int(self.x), int(self.y) + math.sin(timer*3 / 32) * 16), 
+              ((timer % 16 < 8) * 32, 0, 32, 32))
             screen.blit(ball1, ((int(self.x) + math.cos(timer / 32) * random.randrange(8, 16, 8)), int(self.y) + math.sin(timer / 16) * 16), ((timer % 16 < 16) * 32, 0, 32, 32))
+            # screen.blit(ball1, ((int(self.x) + math.cos(timer / 32) * random.randrange(8, 16, 8)),
+            #  int(self.y) + math.sin(timer / 32) * 32), ((timer % 16 < 8) * 32, 0, 32, 32))
             # screen.blit(ball2, ((int(self.x) - math.cos(timer / 8) * 16), int(self.y) + math.cos(timer / 16) * 16), ((timer % 16 < 8) * 32, 0, 32, 32))
-
-
-class LargeCrystal():
-    def __init__(self, x, y):
-        self.x = x
-        self.y = y
-        self.timer = 0
-        self.alive = True
-        self.winCountdown = 500
-    def update(self):
-        global alive
-        global room_num
-        global player_y
-        global player_x
-        global countdown
-        # Se il la radice quadrata della somma dei quadrati di distanza orizz. e vert. è minore di 96
-        if ((player.x - self.x)**2 + (
-            player.y - self.y)**2)**0.5 < 96 and self.alive and countdown > 0:
-            self.timer += 1
-            if self.timer > 80 and self.alive:
-                player.timer = 3000
-                self.alive = False
-                pygame.mixer.Sound.play(sfx_crash)
-                pygame.mixer.music.stop()
-        if not self.alive:
-            self.winCountdown -= 1
-            if self.winCountdown <= 0 and countdown > 0:
-                game_over()
-            
-    def draw(self):
-        if not self in remove:
-            screen.blit(spr_crystal2, (int(self.x), int(self.y)), (self.timer // 32 * 64, 0, 64, 96))
-
 
 
 def game_over():
@@ -393,6 +509,18 @@ def message(text):
     msg = font.render(text, 1, (0, 255, 0))
     return msg
 
+comic_time = 100
+mess = ">>>"
+def comic(x):
+    global comic_time
+
+    if comic_time > 0:
+        screen.blit(message(x), (player.x, player.y - 15))
+    else:
+        comic_time = 100
+    print(f"{comic_time=}")
+
+
 while run:
     ### level generation
 
@@ -444,7 +572,7 @@ while run:
     while run and alive:
 
 
-
+        comic_time -= 1
         timer += 1
         # Countdown starts from second room
         if countdown <= 3000 and room_num >= 1:
@@ -534,12 +662,13 @@ while run:
         # pygame.draw.circle(display, (100, 255, 0), (488*2 + 32, 160 - (countdown // 10)), 8)
         # pygame.draw.circle(display, (255, 255, 255), (488*2 + 32, 164 - (countdown // 10)), 4)
 
+        generate()
         time_indicator()
-
         display.blit(pygame.transform.scale(screen, (488*screen_ratio  , 288*screen_ratio)),(0, 0))
         display.blit(room_number(), (480, 288))
-        msg = message(f"{player.x=} {player.y=}")
+        msg = message(f"Crystals: {len(collected)}")
         display.blit(msg, (10, 10))
+
         pygame.display.flip()
         change_room()
 

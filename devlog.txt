@@ -1,10 +1,11 @@
 game5c.py
-- random crystals
-
+- random crystals (fix some bugs: crystal on walls)
+- added break with a and speed with s
 
 
 
 ---- checklist ---
+- particles rain and snow
 - new character
 - enemies
 	rocks

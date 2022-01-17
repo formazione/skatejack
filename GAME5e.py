@@ -2,43 +2,102 @@ import pygame, time, random, math
 from pygame.locals import *
 # THE LEVELS ARE HERE, they
 # are created by this program with 's'
-from levels2b import *
 
+from locals.randomize_crystals import *
 
-# remove all eventually crystals
-for rnum, room in enumerate(layout[1:-1]):
-    for row, line in enumerate(room):
-        for col, item in enumerate(line):
-            if item == "100":
-                layout[rnum][row][col] = " "
-
-
-possible_place = []
-for rnum, room in enumerate(layout[1:-1]):
-    for row, line in enumerate(room):
-        for col, item in enumerate(line):
-            # print(item)
-            if item == " ":
-                possible_place.append([row, col])
-    # print(possible_place)
-    x = random.choice(possible_place) # IndexError: list index out of range  
-    # print(x)    
-    layout[rnum][x[0]][x[1]] = "100" # TypeError: list indices must be integers or slices, not list
-    # print(room)
-    possible_place = []
-
-
-
-COUNTDOWN_LIMIT = 2000
+group = []
+class Particles(pygame.sprite.Sprite):
+    "Creates particles starting from pos with a color"
+ 
+    def __init__(self, pos, y_dir, color, sparse=0, turn="off"):
+        super(Particles, self).__init__()
+        self.particles_list = []
+        self.pos = pos
+        self.color = color
+        self.y_dir = y_dir
+        self.sparse = sparse # generate particles not from the same starting point
+        # self.generate_particles()
+        group.append(self)
+        self.turn = turn # this makes the effect visible
+ 
+    def choose_y_dir(self):
+        "Makes particles go in every direction you want"
+ 
+        # Make the flow go down
+        if self.y_dir == "down":
+            y_dir = 2
+ 
+        elif self.y_dir == "up":
+            y_dir = -2
+ 
+        # Make the particles spread all y_dirs
+        elif self.y_dir == "all":
+            y_dir = random.randrange(-2, 2, 1)
+ 
+        return y_dir
+ 
+    def generate_particles(self):
+        "List with position etc of particles"
+ 
+        if self.sparse == 1:
+            self.pos[0] = random.randint(0, 600)
+ 
+        # setting the data for each particles
+        origin = [self.pos[0], self.pos[1]] # Starting here each particles
+        y_dir = self.choose_y_dir()
+        x_dir = random.randint(0, 20) / 10 - 1
+        dirs = [x_dir, y_dir] # movement
+        radius = random.randint(4,6) # radius
+        # Appending data to the list
+        self.particles_list.append([origin, dirs, radius])
+        self.generate_movements()
+ 
+    def generate_movements(self):
+        
+        # Moving the coordinates and size of self.particles_list
+        for particle in self.particles_list[:]:
+            particle[0][0] += particle[1][0] # x pos += x_dir
+            particle[0][1] += particle[1][1] # y pos += y_dir
+            particle[2] -= 0.05 # how fast circles shrinks
+            particle[1][1] += 0.01 # circles speed
+            # if particle[2] &lt;= 0:
+            if particle[2] >= 0:
+                self.particles_list.remove(particle)
+            # do not call draw from here: it slows down the frame rate
+            # self.draw()
+    
+    def draw(self):
+        "Draws particles based on data in the self.particles_list"
+        if self.turn == "on":
+            for particle in self.particles_list:
+                 pygame.draw.circle(
+                    screen, (self.color),
+                (round(particle[0][0]), round(particle[0][1])),
+                 round(particle[2]))
+# Some random colors
+RED = (255, 0, 0) 
+GREEN = (0, 255, 0)
+YELLOW = (255, 255, 0)
+CYAN = (0, 255, 255)
+BLUE = (0, 0, 255)
+WHITE = (255, 255, 255)
+# Creating the list with particles ready to be drawn
 
 def init():
     pygame.init()
     pygame.display.init()
     pygame.mixer.init()
 
-
-
+def generate():
+    "Start drawing all circles on the screen"
+    for par in group:
+        par.generate_particles()
+        par.draw()
+# this function randomize the crystals
+layout = randomize_crystals()
+COUNTDOWN_LIMIT = 2000
 init()
+Particles([0, 0], y_dir="down", color=WHITE, sparse=1)
 
 # DISPLAY SURFACES
 # DISPLAY IS THE MAIN SURFACE
@@ -123,17 +182,17 @@ class Player():
         if self.bottomCollision: # quando c'è un tile sotto non cade
             self.ySpeed = 0
             self.inertial_speed()
-        if keys[pygame.K_s] and (self.bottomCollision or self.rightCollision or self.leftCollision):# and not self.topCollision:
+        if keys[pygame.K_x] and (self.bottomCollision or self.rightCollision or self.leftCollision):# and not self.topCollision:
             if self.jump_once < 1:
         # if keys[pygame.K_UP] and self.bottomCollision:
                 self.ySpeed = -8
                 self.bottomCollision = 0
                 self.jump_once += .5
             pygame.mixer.Sound.play(jump)
-        elif keys[pygame.K_a] and keys[pygame.K_RIGHT]:
+        elif keys[pygame.K_z] and keys[pygame.K_RIGHT]:
             if self.xSpeed > 3:
                 self.xSpeed = 0
-        elif keys[pygame.K_a] and keys[pygame.K_LEFT]:
+        elif keys[pygame.K_z] and keys[pygame.K_LEFT]:
             if self.xSpeed < -3:
                 self.xSpeed = 0
              #############
@@ -190,7 +249,7 @@ class Terrain():
 
         # il terzo gruppo di tiles
         elif self.level == 64:
-            if player.x + 16 > self.x and player.x < self.x + 32 and not self.col: # collition with self?
+            if player.x + 16 > self.x and player.x < self.x + 31 and not self.col: # collition with self?
             # Se i piedi del player si trovano all'altezza del tile, cioè sopra...
                 if player.y + 32 > self.y and player.y + 32 < self.y + 16:
                     # il player viene piazzato esattamente sopra il tile
@@ -202,7 +261,7 @@ class Terrain():
                     
         
         else:
-            if player.x + 16 > self.x and player.x < self.x + 32 and not self.col: # collition with self?
+            if player.x + 16 > self.x and player.x < self.x + 31 and not self.col: # collition with self?
             # Se i piedi del player si trovano all'altezza del tile, cioè sopra...
                 if player.y + 32 > self.y and player.y + 32 < self.y + 16:
                     # il player viene piazzato esattamente sopra il tile
@@ -229,25 +288,26 @@ class Terrain():
                         pygame.mixer.Sound.play(sfx_crystal)
 
 
-                if player.x > self.x and player.x < self.x + 32:
-                    if player.y > self.y + 16 and player.y < self.y + 32:
-                        player.y = self.y + 32
+                if player.x > self.x and player.x < self.x + 31:
+                    if player.y > self.y + 16 and player.y < self.y + 31:
+                        player.y = self.y + 31
                         player.ySpeed = 0 # non salta più
                         player.topCollision = True # collide col tile verso l'alto
                         self.col = True # la collisione del player c'è
             
             # se i piedi sono sopra un tile e la testa è minore della base del tile e non c'è collisione
             # if player.y + 32 > self.y and player.y < self.y + 32 and not self.col:
-            if player.y + 32 > self.y and player.y < self.y + 32 and not self.col:
+            # if player.y + 31 > self.y and player.y < self.y + 31 and not self.col:
+            if player.y + 31 == self.y + 31 and not self.col:
 
-                if player.x + 32 > self.x and player.x + 32 < self.x + 16:
+                if player.x + 31 > self.x and player.x + 31 < self.x + 16:
                     player.x = self.x - 32
                     player.xSpeed = -0.4
                     player.rightCollision = True
                     self.col = True
                 # COLLITION LEFT
-                if player.x > self.x + 16 and player.x < self.x + 32:
-                    player.x = self.x + 32
+                if player.x > self.x + 16 and player.x < self.x + 31:
+                    player.x = self.x + 31
                     player.xSpeed = 0.4
                     player.leftCollision = True
                     self.col = True
@@ -534,11 +594,11 @@ while run:
         # pygame.draw.circle(display, (100, 255, 0), (488*2 + 32, 160 - (countdown // 10)), 8)
         # pygame.draw.circle(display, (255, 255, 255), (488*2 + 32, 164 - (countdown // 10)), 4)
 
+        generate()
         time_indicator()
-
         display.blit(pygame.transform.scale(screen, (488*screen_ratio  , 288*screen_ratio)),(0, 0))
         display.blit(room_number(), (480, 288))
-        msg = message(f"{player.x=} {player.y=}")
+        msg = message(f"Crystals: {len(collected)}")
         display.blit(msg, (10, 10))
         pygame.display.flip()
         change_room()
